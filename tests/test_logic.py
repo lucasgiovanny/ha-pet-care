@@ -76,3 +76,21 @@ def test_treatment_window():
     assert treatment_active_on(treatment, date(2026, 10, 31))
     assert not treatment_active_on(treatment, date(2026, 11, 1))
     assert not treatment_active_on({**treatment, "ended": True}, date(2026, 10, 25))
+
+
+def test_bath_accepts_forecast_datetimes():
+    from datetime import UTC
+
+    forecasts = [
+        {
+            "datetime": datetime(2026, 10, 27, 12, tzinfo=UTC),
+            "condition": "sunny",
+            "temperature": 24,
+        },
+        {
+            "datetime": datetime(2026, 10, 28, 12, tzinfo=UTC),
+            "condition": "rainy",
+            "temperature": 20,
+        },
+    ]
+    assert plan_bath(date(2026, 10, 26), date(2026, 10, 29), forecasts)[0] == date(2026, 10, 27)

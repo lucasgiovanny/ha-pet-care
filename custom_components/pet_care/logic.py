@@ -20,6 +20,9 @@ def parse_time(value: str) -> time:
 def parse_date(value: str | date | None) -> date | None:
     if value is None or value == "":
         return None
+    if isinstance(value, datetime):
+        # Forecasts come as datetimes; the day they speak of is the local one.
+        return value.astimezone().date() if value.tzinfo else value.date()
     if isinstance(value, date):
         return value
     return date.fromisoformat(str(value)[:10])
