@@ -28,7 +28,6 @@ jobs:
         run: pip install mypy -r requirements_test.txt
       - name: Type check
         run: mypy custom_components/pet_care
-      - name: Check the frontends parse and their strings resolve
   tests:
     name: Tests
     runs-on: ubuntu-latest
