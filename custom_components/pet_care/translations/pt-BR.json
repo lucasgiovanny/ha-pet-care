@@ -1,0 +1,492 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Adicionar um animal",
+        "data": {
+          "pet_name": "Nome",
+          "species": "Espécie",
+          "sex": "Sexo",
+          "weather_entity": "Meteorologia (para escolher dias de sol para o banho)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Este animal já está configurado."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "menu_options": {
+          "general": "Geral",
+          "meals": "Refeições",
+          "care_add": "Adicionar cuidado",
+          "care_edit": "Editar cuidado",
+          "care_remove": "Remover cuidado"
+        }
+      },
+      "general": {
+        "title": "Geral",
+        "data": {
+          "sex": "Sexo",
+          "weather_entity": "Meteorologia",
+          "food": "Ração",
+          "food_grams": "Gramas por refeição",
+          "reminder_time": "Hora do aviso diário",
+          "bath_times": "Horas dos avisos no dia do banho",
+          "plan_weekday": "Dia para escolher o banho da semana",
+          "weight_day": "Dia do mês para pesar"
+        }
+      },
+      "meals": {
+        "title": "Refeições",
+        "description": "Nome=hora, separados por vírgulas. Exemplo: Manhã=07:45, Noite=19:45",
+        "data": {
+          "meals": "Refeições"
+        }
+      },
+      "care_add": {
+        "title": "Adicionar cuidado",
+        "data": {
+          "name": "Nome",
+          "kind": "Tipo",
+          "interval_days": "De quantos em quantos dias",
+          "shedding_interval_days": "De quantos em quantos dias na troca de pelo",
+          "lead_days": "Avisar quantos dias antes",
+          "icon": "Ícone"
+        }
+      },
+      "care_edit": {
+        "title": "Editar cuidado",
+        "data": {
+          "care": "Cuidado"
+        }
+      },
+      "care_edit_form": {
+        "title": "{care}",
+        "data": {
+          "name": "Nome",
+          "kind": "Tipo",
+          "interval_days": "De quantos em quantos dias",
+          "shedding_interval_days": "De quantos em quantos dias na troca de pelo",
+          "lead_days": "Avisar quantos dias antes",
+          "icon": "Ícone"
+        }
+      },
+      "care_remove": {
+        "title": "Remover cuidado",
+        "data": {
+          "care": "Cuidado"
+        }
+      }
+    },
+    "error": {
+      "no_meals": "Escreve pelo menos uma refeição como Nome=hora."
+    }
+  },
+  "selector": {
+    "species": {
+      "options": {
+        "dog": "Cão",
+        "cat": "Gato",
+        "other": "Outro"
+      }
+    },
+    "sex": {
+      "options": {
+        "female": "Fêmea",
+        "male": "Macho"
+      }
+    },
+    "weekday": {
+      "options": {
+        "0": "Segunda",
+        "1": "Terça",
+        "2": "Quarta",
+        "3": "Quinta",
+        "4": "Sexta",
+        "5": "Sábado",
+        "6": "Domingo"
+      }
+    },
+    "care_kind": {
+      "options": {
+        "interval": "De N em N dias",
+        "sunny": "No máximo de N em N dias, no dia de mais sol",
+        "shedding": "De N em N dias, mais vezes na troca de pelo"
+      }
+    },
+    "amount": {
+      "options": {
+        "all": "Tudo",
+        "half": "Metade",
+        "little": "Pouco",
+        "none": "Nada"
+      }
+    },
+    "symptom": {
+      "options": {
+        "vomit": "Vómito",
+        "soft_stool": "Fezes moles",
+        "diarrhea": "Diarreia",
+        "itching": "Coceira forte",
+        "paw_licking": "Lambeu/mordeu as patas",
+        "red_eyes_ears": "Olhos/orelhas vermelhos",
+        "no_appetite": "Sem apetite",
+        "lethargy": "Letargia",
+        "other": "Outro"
+      }
+    },
+    "treatment_kind": {
+      "options": {
+        "ointment": "Pomada",
+        "spray": "Spray",
+        "pill": "Comprimido",
+        "drops": "Gotas",
+        "shampoo": "Shampoo",
+        "injection": "Injeção",
+        "other": "Outro"
+      }
+    },
+    "dose_status": {
+      "options": {
+        "given": "Dado",
+        "skipped": "Saltado"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "meal": {
+        "name": "Refeição {meal}",
+        "state": {
+          "pending": "Por dar",
+          "all": "Tudo",
+          "half": "Metade",
+          "little": "Pouco",
+          "none": "Nada"
+        }
+      },
+      "weight": {
+        "name": "Peso"
+      },
+      "treatments": {
+        "name": "Tratamentos"
+      },
+      "next_dose": {
+        "name": "Próxima dose"
+      },
+      "log": {
+        "name": "Registo"
+      },
+      "report": {
+        "name": "Sintomas em 30 dias"
+      },
+      "last_symptom": {
+        "name": "Último sintoma"
+      }
+    },
+    "binary_sensor": {
+      "late": {
+        "name": "{care} atrasado"
+      }
+    },
+    "switch": {
+      "shedding": {
+        "name": "Época de troca de pelo"
+      }
+    },
+    "button": {
+      "care_done": {
+        "name": "{care} feito"
+      },
+      "plan_bath": {
+        "name": "Escolher dia do banho"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Cuidados"
+      }
+    }
+  },
+  "services": {
+    "log_care": {
+      "name": "Registar cuidado",
+      "description": "Regista um cuidado como feito.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "care": {
+          "name": "Cuidado",
+          "description": "Chave ou nome do cuidado."
+        },
+        "at": {
+          "name": "Quando",
+          "description": "Vazio = agora."
+        },
+        "note": {
+          "name": "Nota",
+          "description": "Qualquer coisa a lembrar."
+        }
+      }
+    },
+    "log_meal": {
+      "name": "Registar refeição",
+      "description": "Quanto comeu de uma refeição.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "meal": {
+          "name": "Refeição",
+          "description": "Vazio = pela hora do dia."
+        },
+        "amount": {
+          "name": "Quanto",
+          "description": "Quanto comeu."
+        },
+        "grams": {
+          "name": "Gramas",
+          "description": "Opcional."
+        },
+        "at": {
+          "name": "Quando",
+          "description": "Vazio = agora."
+        },
+        "note": {
+          "name": "Nota",
+          "description": "Qualquer coisa a lembrar."
+        }
+      }
+    },
+    "log_snack": {
+      "name": "Registar snack",
+      "description": "Comida fora das refeições normais.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "what": {
+          "name": "O quê",
+          "description": "O que comeu."
+        },
+        "grams": {
+          "name": "Gramas",
+          "description": "Opcional."
+        },
+        "at": {
+          "name": "Quando",
+          "description": "Vazio = agora."
+        },
+        "note": {
+          "name": "Nota",
+          "description": "Qualquer coisa a lembrar."
+        }
+      }
+    },
+    "log_symptom": {
+      "name": "Registar sintoma",
+      "description": "Vómito, fezes moles, coceira…",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "symptom": {
+          "name": "Sintoma",
+          "description": "O que aconteceu."
+        },
+        "at": {
+          "name": "Quando",
+          "description": "Vazio = agora."
+        },
+        "note": {
+          "name": "Nota",
+          "description": "Qualquer coisa a lembrar."
+        }
+      }
+    },
+    "log_weight": {
+      "name": "Registar peso",
+      "description": "Uma pesagem.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "kg": {
+          "name": "kg",
+          "description": "Peso em quilos."
+        },
+        "at": {
+          "name": "Quando",
+          "description": "Vazio = agora."
+        },
+        "note": {
+          "name": "Nota",
+          "description": "Qualquer coisa a lembrar."
+        }
+      }
+    },
+    "log_dose": {
+      "name": "Registar dose",
+      "description": "Uma dose de tratamento dada ou saltada.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "treatment": {
+          "name": "Tratamento",
+          "description": "Id ou nome."
+        },
+        "status": {
+          "name": "Estado",
+          "description": "Dada ou saltada."
+        },
+        "time": {
+          "name": "Hora da dose",
+          "description": "Vazio = a dose em aberto mais próxima."
+        }
+      }
+    },
+    "add_treatment": {
+      "name": "Novo tratamento",
+      "description": "Um remédio com horas, início e fim.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "name": {
+          "name": "Nome",
+          "description": "Nome do remédio."
+        },
+        "kind": {
+          "name": "Tipo",
+          "description": "Pomada, spray, comprimido…"
+        },
+        "dose": {
+          "name": "Dose",
+          "description": "Quanto de cada vez."
+        },
+        "times": {
+          "name": "Horas",
+          "description": "Separadas por vírgula, ex. 07:45, 19:45."
+        },
+        "start": {
+          "name": "Início",
+          "description": "Vazio = hoje."
+        },
+        "end": {
+          "name": "Fim",
+          "description": "Último dia; vazio = sem fim."
+        },
+        "note": {
+          "name": "Nota",
+          "description": "Qualquer coisa a lembrar."
+        }
+      }
+    },
+    "update_treatment": {
+      "name": "Alterar tratamento",
+      "description": "Altera um tratamento.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "treatment": {
+          "name": "Tratamento",
+          "description": "Id ou nome."
+        },
+        "name": {
+          "name": "Novo nome",
+          "description": "Vazio = sem mudar."
+        },
+        "kind": {
+          "name": "Tipo",
+          "description": "Vazio = sem mudar."
+        },
+        "dose": {
+          "name": "Dose",
+          "description": "Vazio = sem mudar."
+        },
+        "times": {
+          "name": "Horas",
+          "description": "Vazio = sem mudar."
+        },
+        "start": {
+          "name": "Início",
+          "description": "Vazio = sem mudar."
+        },
+        "end": {
+          "name": "Fim",
+          "description": "Vazio = sem mudar."
+        }
+      }
+    },
+    "end_treatment": {
+      "name": "Terminar tratamento",
+      "description": "Termina um tratamento hoje.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "treatment": {
+          "name": "Tratamento",
+          "description": "Id ou nome."
+        }
+      }
+    },
+    "set_due": {
+      "name": "Definir próxima data",
+      "description": "Define quando é o próximo cuidado.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "care": {
+          "name": "Cuidado",
+          "description": "Chave ou nome."
+        },
+        "date": {
+          "name": "Data",
+          "description": "Próxima data."
+        }
+      }
+    },
+    "delete_entry": {
+      "name": "Apagar registo",
+      "description": "Apaga um registo errado.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "entry": {
+          "name": "Id",
+          "description": "Id do registo."
+        }
+      }
+    },
+    "export": {
+      "name": "Exportar registo",
+      "description": "Grava o registo inteiro num CSV na pasta de media.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        }
+      }
+    }
+  }
+}
