@@ -1,7 +1,7 @@
 // Pet Care card: tiles that look like Home Assistant's own, and dialogs made for each kind of record.
 // Every card points at the pet's log sensor, whose `card` attribute says where everything else is.
 
-const VERSION = "0.2.2";
+const VERSION = "0.2.3";
 
 const TEXT = {
   pt: {
@@ -26,9 +26,11 @@ const TEXT = {
     start: "Início", end: "Último dia", noEnd: "Sem fim", forDays: "Durar", endTreatment: "Terminar tratamento",
     saved: "Registado", undone: "Desfeito", gaveAt: (t, by) => `Dada às ${t}${by ? " · " + by : ""}`,
     markGiven: "Dei", markSkipped: "Saltei", undoDose: "Desfazer esta dose", edit: "Editar tratamento",
-    upcoming: "Próximas datas", nothing: "Nada marcado", medicinesLeft: (n) => `${n} remédio(s) por dar`,
+    upcoming: "Próximas datas", noWeights: "Sem pesagens · toca para pesar", nothing: "Nada marcado", medicinesLeft: (n) => `${n} remédio(s) por dar`,
     lateCare: (n) => `${n} cuidado(s) atrasado(s)`, next: "Próximo", kg: "kg", choose: "Escolhe um",
     mealPending: (name, time) => `${name} por dar · ${time}`,
+    ateMeals: (n, total) => (n === total ? (total === 1 ? "Já comeu" : `Comeu as ${total} refeições`) : `Comeu ${n} de ${total} refeições`),
+    mealLate: (name) => `${name} por dar`, medicinesDone: "remédios dados", careLate: (name) => `${name} atrasado`,
   },
   en: {
     today: "Today", pending: "Pending", given: "Given", skipped: "Skipped", missed: "Missed",
@@ -52,9 +54,11 @@ const TEXT = {
     start: "Start", end: "Last day", noEnd: "No end", forDays: "Lasts", endTreatment: "End treatment",
     saved: "Saved", undone: "Undone", gaveAt: (t, by) => `Given at ${t}${by ? " · " + by : ""}`,
     markGiven: "Given", markSkipped: "Skipped", undoDose: "Undo this dose", edit: "Edit treatment",
-    upcoming: "Upcoming", nothing: "Nothing planned", medicinesLeft: (n) => `${n} medicine(s) pending`,
+    upcoming: "Upcoming", noWeights: "No weigh-ins · tap to weigh", nothing: "Nothing planned", medicinesLeft: (n) => `${n} medicine(s) pending`,
     lateCare: (n) => `${n} care item(s) late`, next: "Next", kg: "kg", choose: "Pick one",
     mealPending: (name, time) => `${name} pending · ${time}`,
+    ateMeals: (n, total) => (n === total ? (total === 1 ? "Has eaten" : `Ate all ${total} meals`) : `Ate ${n} of ${total} meals`),
+    mealLate: (name) => `${name} pending`, medicinesDone: "medicines given", careLate: (name) => `${name} late`,
   },
 };
 
@@ -100,7 +104,10 @@ const TILE_CSS = `
   .text { min-width: 0; display: flex; flex-direction: column; }
   .primary { font-size: 14px; font-weight: 500; line-height: 20px; color: var(--primary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .secondary { font-size: 12px; line-height: 16px; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .vertical .primary { font-size: 12px; white-space: normal; }
+  .vertical .primary { font-size: 13px; white-space: normal; }
+  .chart { padding: 0 12px 10px; height: calc(100% - 60px); box-sizing: border-box; }
+  .chart svg { width: 100%; height: 100%; overflow: visible; }
+  .chart text { font-size: 10px; fill: var(--secondary-text-color); }
   .grid { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 8px; }
   .grid > ha-card { height: 56px; }
   .list { padding: 6px 12px; }
@@ -451,12 +458,13 @@ class PetCareCard extends HTMLElement {
     this._render();
   }
 
-  getCardSize() { return this._config.show === "doses" ? Math.max(1, Math.ceil((this._card?.doses?.length || 1) / 2)) : this._config.show === "action" ? 2 : 1; }
+  getCardSize() { if (this._config.show === "weight") return 3; return this._config.show === "doses" ? Math.max(1, Math.ceil((this._card?.doses?.length || 1) / 2)) : this._config.show === "action" ? 2 : 1; }
 
   getGridOptions() {
     const s = this._config.show;
     if (s === "summary") return { columns: "full", rows: 1, min_rows: 1 };
-    if (s === "action") return { columns: 3, rows: 2, min_columns: 2, min_rows: 2 };
+    if (s === "action") return { columns: 6, rows: 2, min_columns: 3, min_rows: 2 };
+    if (s === "weight") return (this._hass?.states[this._card?.weight]?.attributes?.history || []).length ? { columns: 12, rows: 3, min_rows: 2 } : { columns: 12, rows: 1, min_rows: 1 };
     if (s === "doses") { const n = Math.max(1, Math.ceil((this._card?.doses?.length || 1) / 2)); return { columns: 12, rows: n, min_rows: n }; }
     if (s === "upcoming") return { columns: 12, rows: "auto" };
     return { columns: 6, rows: 1, min_rows: 1 };
@@ -483,18 +491,26 @@ class PetCareCard extends HTMLElement {
 
     if (cfg.show === "summary") {
       const bits = [];
-      for (const m of card.meals) {
-        const s = hass.states[m.entity]?.state;
-        if (s && s !== "pending") bits.push(`${m.name}: ${T.amounts[s] || s}`);
-        else if (now.getHours() * 60 + now.getMinutes() >= Number(m.time.slice(0, 2)) * 60 + Number(m.time.slice(3, 5))) bits.push(T.mealPending(m.name, m.time));
+      const minutes = now.getHours() * 60 + now.getMinutes();
+      const due = card.meals.filter((m) => minutes >= Number(m.time.slice(0, 2)) * 60 + Number(m.time.slice(3, 5)));
+      const states = card.meals.map((m) => ({ m, s: hass.states[m.entity]?.state || "pending" }));
+      const eaten = states.filter((x) => x.s !== "pending");
+      const odd = eaten.filter((x) => x.s !== "all");
+      const late = states.filter((x) => x.s === "pending" && due.includes(x.m));
+      if (eaten.length && !odd.length && !late.length) bits.push(T.ateMeals(eaten.length, card.meals.length));
+      for (const x of odd) bits.push(`${x.m.name}: ${T.ate[x.s].toLowerCase()}`);
+      for (const x of late) bits.push(T.mealLate(x.m.name));
+      const open = card.doses.filter((d) => !d.status);
+      if (card.doses.length) bits.push(open.length ? T.medicinesLeft(open.length) : T.medicinesDone);
+      const lateCare = card.care.filter((c) => hass.states[c.entity]?.attributes?.overdue);
+      for (const c of lateCare) bits.push(T.careLate(c.name));
+      const next = card.upcoming.find((u) => !lateCare.some((c) => u.summary.startsWith(c.name)));
+      if (next) {
+        const n = daysBetween(now, parseDay(next.day));
+        const when = n <= 1 ? T.inDays(n) : parseDay(next.day).toLocaleDateString(lang(hass), { weekday: "short", day: "2-digit", month: "2-digit" });
+        bits.push(`${T.next.toLowerCase()}: ${next.summary} ${when}`);
       }
-      const open = card.doses.filter((d) => !d.status).length;
-      if (open) bits.push(T.medicinesLeft(open));
-      const late = card.care.filter((c) => hass.states[c.entity]?.attributes?.overdue).length;
-      if (late) bits.push(T.lateCare(late));
-      const next = card.upcoming[0];
-      if (next) bits.push(`${T.next}: ${next.summary} ${T.inDays(daysBetween(now, parseDay(next.day)))}`);
-      const colorName = late ? "red" : open ? "amber" : "green";
+      const colorName = lateCare.length ? "red" : open.length || late.length ? "amber" : "green";
       html = this._tile({ icon: "mdi:dog", colorName, primary: `${card.pet} · ${T.today}`, secondary: bits.join(" · ") });
     } else if (cfg.show === "meal") {
       const m = card.meals.find((x) => x.key === cfg.meal) || card.meals[0];
@@ -521,6 +537,29 @@ class PetCareCard extends HTMLElement {
       const n = a.days_left;
       const colorName = n === null || n === undefined ? "grey" : n < 0 ? "red" : n <= 1 ? "amber" : "green";
       html = this._tile({ icon: care.icon || "mdi:paw", colorName, primary: care.name, secondary: bits.join(" · "), data: `data-act="care" data-care="${esc(care.key)}"` });
+    } else if (cfg.show === "weight") {
+      const st = hass.states[card.weight];
+      const points = (st?.attributes?.history || []).map((p) => ({ at: new Date(p.at), kg: Number(p.kg) })).filter((p) => Number.isFinite(p.kg));
+      const last = points[points.length - 1];
+      const secondary = last ? `${last.kg.toLocaleString(lang(hass), { maximumFractionDigits: 1 })} kg · ${T.daysAgo(daysBetween(last.at, now))}` : T.noWeights;
+      let chart = "";
+      if (points.length) {
+        const W = 300, H = 80;
+        const lo = Math.min(...points.map((p) => p.kg)) - 0.5, hi = Math.max(...points.map((p) => p.kg)) + 0.5;
+        const t0 = points[0].at.getTime(), t1 = Math.max(last.at.getTime(), t0 + 86400000);
+        const x = (p) => ((p.at.getTime() - t0) / (t1 - t0)) * W;
+        const y = (p) => H - ((p.kg - lo) / (hi - lo)) * H;
+        const path = points.map((p, i) => `${i ? "L" : "M"}${x(p).toFixed(1)},${y(p).toFixed(1)}`).join(" ");
+        chart = `<div class="chart"><svg viewBox="0 -10 ${W} ${H + 24}" preserveAspectRatio="none">
+          <path d="${path}" fill="none" stroke="${color("blue")}" stroke-width="2" vector-effect="non-scaling-stroke"/>
+          ${points.map((p) => `<circle cx="${x(p).toFixed(1)}" cy="${y(p).toFixed(1)}" r="3" fill="${color("blue")}"/>`).join("")}
+          <text x="0" y="${H + 14}">${esc(points[0].at.toLocaleDateString(lang(hass), { day: "2-digit", month: "2-digit" }))}</text>
+          <text x="${W}" y="${H + 14}" text-anchor="end">${esc(last.at.toLocaleDateString(lang(hass), { day: "2-digit", month: "2-digit" }))}</text>
+        </svg></div>`;
+      }
+      html = `<ha-card><div class="tile" data-act="weight" style="--c:${color("blue")};height:56px;min-height:56px">
+        <div class="icon"><ha-icon icon="mdi:scale-bathroom"></ha-icon></div>
+        <div class="text"><span class="primary">${esc(T.weight)}</span><span class="secondary">${esc(secondary)}</span></div></div>${chart}</ha-card>`;
     } else if (cfg.show === "upcoming") {
       html = `<ha-card><div class="list">${card.upcoming.length ? card.upcoming.map((u) => `<div class="row"><span>${esc(u.summary)}</span><span class="day">${esc(parseDay(u.day).toLocaleDateString(lang(hass), { weekday: "short", day: "2-digit", month: "2-digit" }))}</span></div>`).join("") : `<div class="empty">${esc(T.nothing)}</div>`}</div></ha-card>`;
     } else {
