@@ -1,7 +1,7 @@
 // Pet Care card: tiles that look like Home Assistant's own, and dialogs made for each kind of record.
 // Every card points at the pet's log sensor, whose `card` attribute says where everything else is.
 
-const VERSION = "0.2.1";
+const VERSION = "0.2.2";
 
 const TEXT = {
   pt: {
@@ -192,9 +192,10 @@ function openDialog(hass, title, icon, iconColor, body, onReady) {
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `<style>${DIALOG_CSS}</style><div class="scrim"><div class="sheet" role="dialog" aria-modal="true">
     <h2>${icon ? `<ha-icon icon="${icon}" style="color:${color(iconColor)}"></ha-icon>` : ""}${esc(title)}</h2>${body}</div></div>`;
-  const close = () => host.remove();
+  const onKey = (ev) => { if (ev.key === "Escape") close(); };
+  const close = () => { host.remove(); document.removeEventListener("keydown", onKey); };
   root.querySelector(".scrim").addEventListener("click", (ev) => { if (ev.target.classList.contains("scrim")) close(); });
-  root.addEventListener("keydown", (ev) => { if (ev.key === "Escape") close(); });
+  document.addEventListener("keydown", onKey);
   root.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", close));
   document.body.appendChild(host);
   onReady?.(root, close);
