@@ -215,3 +215,17 @@ async def test_scripts_can_pass_empty_fields_and_all_doses(
     await hass.services.async_call(DOMAIN, "log_dose", {"treatment": "all"}, blocking=True)
     await hass.async_block_till_done()
     assert {d["status"] for d in pet.runtime_data.doses_today()} == {"given"}
+
+
+async def test_doses_before_a_treatment_existed_do_not_count(
+    hass: HomeAssistant, pet: MockConfigEntry
+) -> None:
+    now = dt_util.now()
+    earlier = (now - timedelta(hours=3)).strftime("%H:%M")
+    later = (now + timedelta(hours=1)).strftime("%H:%M")
+    if earlier > now.strftime("%H:%M") or later < now.strftime("%H:%M"):
+        pytest.skip("too close to midnight for this check")
+    await hass.services.async_call(
+        DOMAIN, "add_treatment", {"name": "Pomada", "times": f"{earlier}, {later}"}, blocking=True
+    )
+    assert [d["time"] for d in pet.runtime_data.doses_today()] == [later]

@@ -144,6 +144,16 @@ class PetTracker:
         self.shedding = data.get("shedding", False)
         self.treatments = data.get("treatments", [])
         self.bath_plans = data.get("bath_plans", {})
+        for treatment in self.treatments:
+            # Treatments from 0.1.2 and earlier: their start is in the log.
+            if "created" not in treatment:
+                started = [
+                    e
+                    for e in self.entries("treatment", treatment["id"])
+                    if str(e.get("value", "")).startswith("start")
+                ]
+                if started:
+                    treatment["created"] = started[0]["at"]
 
     def _data(self) -> dict[str, Any]:
         return {
@@ -404,6 +414,7 @@ class PetTracker:
             "start": (data.get("start") or dt_util.now().date()).isoformat(),
             "end": data["end"].isoformat() if data.get("end") else None,
             "ended": False,
+            "created": dt_util.now().isoformat(),
         }
         self.treatments.append(treatment)
         self._append(
@@ -459,6 +470,21 @@ class PetTracker:
         ]
         return found[-1]["value"] if found else None
 
+    def dose_times(self, treatment: dict[str, Any], day: date) -> list[str]:
+        """A treatment's times on a day, without the ones already past when it was created."""
+        created = treatment.get("created")
+        if not created:
+            return list(treatment["times"])
+        made = dt_util.as_local(_when(created))
+        if self.care_day(made) != day:
+            return list(treatment["times"])
+        return [
+            at
+            for at in treatment["times"]
+            if datetime.combine(day, parse_time(at), tzinfo=made.tzinfo)
+            >= made - timedelta(minutes=30)
+        ]
+
     def doses_today(self) -> list[dict[str, Any]]:
         return [
             {
@@ -468,7 +494,7 @@ class PetTracker:
                 "status": self.dose_status(t["id"], at),
             }
             for t in self.active_treatments()
-            for at in t["times"]
+            for at in self.dose_times(t, self.care_day())
         ]
 
     async def async_log_dose(
@@ -583,7 +609,7 @@ class PetTracker:
                 )
 
         for treatment in self.active_treatments(today):
-            for at in treatment["times"]:
+            for at in self.dose_times(treatment, today):
                 repeat = repeat_index(now, parse_time(at))
                 if repeat is not None and self.dose_status(treatment["id"], at) is None:
                     message = self._fmt("dose_message", name=treatment["name"], time=at)
@@ -652,7 +678,7 @@ class PetTracker:
         for treatment in self.treatments:
             if not treatment_active_on(treatment, yesterday):
                 continue
-            for at in treatment["times"]:
+            for at in self.dose_times(treatment, yesterday):
                 if self.dose_status(treatment["id"], at, yesterday) is None:
                     moment = datetime.combine(yesterday, parse_time(at), tzinfo=now.tzinfo)
                     self._append(
