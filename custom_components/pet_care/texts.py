@@ -18,6 +18,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "lethargy": "Letargia",
             "other": "Outro",
         },
+        "dose_status": {"given": "dada", "skipped": "saltada", "missed": "falhou"},
+        "treatment_start": "Início",
+        "treatment_end": "Fim",
+        "weigh_in": "Pesagem",
         "weekday": ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"],
         "condition": {
             "sunny": "sol",
@@ -69,6 +73,10 @@ TEXTS: dict[str, dict[str, Any]] = {
             "lethargy": "Lethargy",
             "other": "Other",
         },
+        "dose_status": {"given": "given", "skipped": "skipped", "missed": "missed"},
+        "treatment_start": "Start",
+        "treatment_end": "End",
+        "weigh_in": "Weigh-in",
         "weekday": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
         "condition": {
             "sunny": "sunny",

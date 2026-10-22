@@ -934,7 +934,13 @@ class PetTracker:
                     f"{meals.get(entry.get('key'), entry.get('key'))}: {amounts.get(entry['value'], entry['value'])}"
                 )
             elif entry["type"] == "dose":
-                row["label"] = f"{entry.get('note', '')}: {entry['value']}"
+                status = self.t["dose_status"].get(entry["value"], entry["value"])
+                row["label"] = f"{entry.get('note', '')}: {status}"
+            elif entry["type"] == "treatment":
+                verb, _, name = str(entry.get("value", "")).partition(": ")
+                row["label"] = (
+                    f"{self.t['treatment_start' if verb == 'start' else 'treatment_end']}: {name}"
+                )
             elif entry["type"] == "weight":
                 row["label"] = f"{entry['value']} kg"
             else:
@@ -1007,7 +1013,9 @@ class PetTracker:
             if today.day <= weigh_day
             else (today.replace(day=1) + timedelta(days=32)).replace(day=weigh_day)
         )
-        items.append({"day": next_weigh, "summary": f"⚖️ {self.pet}", "uid": "weight"})
+        items.append(
+            {"day": next_weigh, "summary": f"{self.t['weigh_in']} · {self.pet}", "uid": "weight"}
+        )
         return sorted(items, key=lambda i: i["day"])
 
     def food(self) -> dict[str, Any]:

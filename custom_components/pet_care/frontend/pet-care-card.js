@@ -1,7 +1,7 @@
 // Pet Care card: tiles that look like Home Assistant's own, and dialogs made for each kind of record.
 // Every card points at the pet's log sensor, whose `card` attribute says where everything else is.
 
-const VERSION = "0.2.0";
+const VERSION = "0.2.1";
 
 const TEXT = {
   pt: {
@@ -109,6 +109,10 @@ const TILE_CSS = `
   .row .day { color: var(--secondary-text-color); white-space: nowrap; }
   .empty { padding: 16px; color: var(--secondary-text-color); font-size: 14px; }
 `;
+
+function lang(hass) {
+  return hass?.locale?.language || hass?.language || undefined;
+}
 
 function t(hass) {
   return (hass?.locale?.language || hass?.language || "en").startsWith("pt") ? TEXT.pt : TEXT.en;
@@ -309,7 +313,7 @@ function careDialog(hass, card, care) {
   const st = hass.states[care.entity];
   const a = st?.attributes || {};
   const body = `
-    <div class="sub">${esc(a.last_done ? `${T.lastDone}: ${parseDay(a.last_done).toLocaleDateString()}` : T.never)}${a.due ? ` · ${T.next}: ${parseDay(a.planned_day || a.due).toLocaleDateString()}` : ""}</div>
+    <div class="sub">${esc(a.last_done ? `${T.lastDone}: ${parseDay(a.last_done).toLocaleDateString(lang(hass))}` : T.never)}${a.due ? ` · ${T.next}: ${parseDay(a.planned_day || a.due).toLocaleDateString(lang(hass))}` : ""}</div>
     <button class="primary-btn wide" data-today style="border:none;border-radius:20px;padding:14px;font-size:15px;cursor:pointer;width:100%">${esc(T.done)}</button>
     <details><summary>${esc(T.otherDay)}</summary><label>${esc(T.when)}</label><input type="date" name="day" value="${dateInput(new Date())}">
       <label>${esc(T.note)}</label><textarea name="note"></textarea>
@@ -507,14 +511,17 @@ class PetCareCard extends HTMLElement {
     } else if (cfg.show === "care") {
       const care = card.care.find((c) => c.key === cfg.care) || card.care[0];
       const a = hass.states[care.entity]?.attributes || {};
-      const bits = [a.last_done ? T.daysAgo(daysBetween(parseDay(a.last_done), now)) : T.never];
-      if (a.planned_day) bits.push(`${T.sunnyDay} ${parseDay(a.planned_day).toLocaleDateString(undefined, { weekday: "short", day: "2-digit", month: "2-digit" })}`);
-      else if (a.days_left !== null && a.days_left !== undefined) bits.push(`${T.next} ${T.inDays(a.days_left)}`);
+      const short = (day) => parseDay(day).toLocaleDateString(lang(hass), { weekday: "short", day: "2-digit", month: "2-digit" });
+      const bits = [];
+      if (a.last_done) bits.push(T.daysAgo(daysBetween(parseDay(a.last_done), now)));
+      if (a.planned_day) bits.push(`☀️ ${short(a.planned_day)}`);
+      else if (a.days_left !== null && a.days_left !== undefined) bits.push(a.last_done ? T.inDays(a.days_left) : `${T.inDays(a.days_left)} · ${short(a.due)}`);
+      if (!bits.length) bits.push(T.never);
       const n = a.days_left;
       const colorName = n === null || n === undefined ? "grey" : n < 0 ? "red" : n <= 1 ? "amber" : "green";
       html = this._tile({ icon: care.icon || "mdi:paw", colorName, primary: care.name, secondary: bits.join(" · "), data: `data-act="care" data-care="${esc(care.key)}"` });
     } else if (cfg.show === "upcoming") {
-      html = `<ha-card><div class="list">${card.upcoming.length ? card.upcoming.map((u) => `<div class="row"><span>${esc(u.summary)}</span><span class="day">${esc(parseDay(u.day).toLocaleDateString(undefined, { weekday: "short", day: "2-digit", month: "2-digit" }))}</span></div>`).join("") : `<div class="empty">${esc(T.nothing)}</div>`}</div></ha-card>`;
+      html = `<ha-card><div class="list">${card.upcoming.length ? card.upcoming.map((u) => `<div class="row"><span>${esc(u.summary)}</span><span class="day">${esc(parseDay(u.day).toLocaleDateString(lang(hass), { weekday: "short", day: "2-digit", month: "2-digit" }))}</span></div>`).join("") : `<div class="empty">${esc(T.nothing)}</div>`}</div></ha-card>`;
     } else {
       const a = ACTIONS[cfg.action] || ACTIONS.symptom;
       html = this._tile({ icon: cfg.icon || a.icon, colorName: cfg.color || a.color, primary: cfg.name || T[cfg.action] || cfg.action, vertical: true, data: `data-act="${esc(cfg.action)}"` });
