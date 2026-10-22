@@ -1,0 +1,13 @@
+{
+  "domain": "pet_care",
+  "name": "Pet Care",
+  "codeowners": ["@lucasgiovanny"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/lucasgiovanny/ha-pet-care",
+  "integration_type": "device",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/lucasgiovanny/ha-pet-care/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

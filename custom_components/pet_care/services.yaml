@@ -1,0 +1,172 @@
+log_care:
+  fields:
+    config_entry_id: &pet
+      selector:
+        config_entry:
+          integration: pet_care
+    care:
+      required: true
+      selector:
+        text:
+    at: &at
+      selector:
+        datetime:
+    note: &note
+      selector:
+        text:
+          multiline: true
+
+log_meal:
+  fields:
+    config_entry_id: *pet
+    meal:
+      selector:
+        text:
+    amount:
+      required: true
+      selector:
+        select:
+          translation_key: amount
+          options: [all, half, little, none]
+    grams: &grams
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: g
+          mode: box
+    at: *at
+    note: *note
+
+log_snack:
+  fields:
+    config_entry_id: *pet
+    what:
+      required: true
+      selector:
+        text:
+    grams: *grams
+    at: *at
+    note: *note
+
+log_symptom:
+  fields:
+    config_entry_id: *pet
+    symptom:
+      required: true
+      selector:
+        select:
+          translation_key: symptom
+          options: [vomit, soft_stool, diarrhea, itching, paw_licking, red_eyes_ears, no_appetite, lethargy, other]
+    at: *at
+    note: *note
+
+log_weight:
+  fields:
+    config_entry_id: *pet
+    kg:
+      required: true
+      selector:
+        number:
+          min: 0.1
+          max: 150
+          step: 0.1
+          unit_of_measurement: kg
+          mode: box
+    at: *at
+    note: *note
+
+log_dose:
+  fields:
+    config_entry_id: *pet
+    treatment:
+      required: true
+      selector:
+        text:
+    status:
+      default: given
+      selector:
+        select:
+          translation_key: dose_status
+          options: [given, skipped]
+    time:
+      selector:
+        time:
+
+add_treatment:
+  fields:
+    config_entry_id: *pet
+    name:
+      required: true
+      selector:
+        text:
+    kind: &kind
+      selector:
+        select:
+          translation_key: treatment_kind
+          options: [ointment, spray, pill, drops, shampoo, injection, other]
+    dose: &dose
+      selector:
+        text:
+    times:
+      required: true
+      example: "07:45, 19:45"
+      selector:
+        text:
+    start: &start
+      selector:
+        date:
+    end: &end
+      selector:
+        date:
+    note: *note
+
+update_treatment:
+  fields:
+    config_entry_id: *pet
+    treatment:
+      required: true
+      selector:
+        text:
+    name:
+      selector:
+        text:
+    kind: *kind
+    dose: *dose
+    times:
+      selector:
+        text:
+    start: *start
+    end: *end
+
+end_treatment:
+  fields:
+    config_entry_id: *pet
+    treatment:
+      required: true
+      selector:
+        text:
+
+set_due:
+  fields:
+    config_entry_id: *pet
+    care:
+      required: true
+      selector:
+        text:
+    date:
+      required: true
+      selector:
+        date:
+
+delete_entry:
+  fields:
+    config_entry_id: *pet
+    entry:
+      required: true
+      selector:
+        text:
+
+export:
+  fields:
+    config_entry_id: *pet

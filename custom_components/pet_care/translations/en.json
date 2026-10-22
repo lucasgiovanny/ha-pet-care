@@ -1,0 +1,492 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a pet",
+        "data": {
+          "pet_name": "Name",
+          "species": "Species",
+          "sex": "Sex",
+          "weather_entity": "Weather (to pick sunny bath days)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This pet is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "menu_options": {
+          "general": "General",
+          "meals": "Meals",
+          "care_add": "Add care",
+          "care_edit": "Edit care",
+          "care_remove": "Remove care"
+        }
+      },
+      "general": {
+        "title": "General",
+        "data": {
+          "sex": "Sex",
+          "weather_entity": "Weather",
+          "food": "Food",
+          "food_grams": "Grams per meal",
+          "reminder_time": "Daily reminder time",
+          "bath_times": "Reminder times on bath day",
+          "plan_weekday": "Day to plan the week's bath",
+          "weight_day": "Day of the month to weigh"
+        }
+      },
+      "meals": {
+        "title": "Meals",
+        "description": "Name=time, separated by commas. Example: Morning=07:45, Evening=19:45",
+        "data": {
+          "meals": "Meals"
+        }
+      },
+      "care_add": {
+        "title": "Add care",
+        "data": {
+          "name": "Name",
+          "kind": "Kind",
+          "interval_days": "Every (days)",
+          "shedding_interval_days": "Every (days) while shedding",
+          "lead_days": "Warn days before",
+          "icon": "Icon"
+        }
+      },
+      "care_edit": {
+        "title": "Edit care",
+        "data": {
+          "care": "Care"
+        }
+      },
+      "care_edit_form": {
+        "title": "{care}",
+        "data": {
+          "name": "Name",
+          "kind": "Kind",
+          "interval_days": "Every (days)",
+          "shedding_interval_days": "Every (days) while shedding",
+          "lead_days": "Warn days before",
+          "icon": "Icon"
+        }
+      },
+      "care_remove": {
+        "title": "Remove care",
+        "data": {
+          "care": "Care"
+        }
+      }
+    },
+    "error": {
+      "no_meals": "Write at least one meal as Name=time."
+    }
+  },
+  "selector": {
+    "species": {
+      "options": {
+        "dog": "Dog",
+        "cat": "Cat",
+        "other": "Other"
+      }
+    },
+    "sex": {
+      "options": {
+        "female": "Female",
+        "male": "Male"
+      }
+    },
+    "weekday": {
+      "options": {
+        "0": "Monday",
+        "1": "Tuesday",
+        "2": "Wednesday",
+        "3": "Thursday",
+        "4": "Friday",
+        "5": "Saturday",
+        "6": "Sunday"
+      }
+    },
+    "care_kind": {
+      "options": {
+        "interval": "Every N days",
+        "sunny": "Every N days at most, on the sunniest day",
+        "shedding": "Every N days, more often while shedding"
+      }
+    },
+    "amount": {
+      "options": {
+        "all": "All",
+        "half": "Half",
+        "little": "Little",
+        "none": "None"
+      }
+    },
+    "symptom": {
+      "options": {
+        "vomit": "Vomit",
+        "soft_stool": "Soft stool",
+        "diarrhea": "Diarrhea",
+        "itching": "Strong itching",
+        "paw_licking": "Licked/bit paws",
+        "red_eyes_ears": "Red eyes/ears",
+        "no_appetite": "No appetite",
+        "lethargy": "Lethargy",
+        "other": "Other"
+      }
+    },
+    "treatment_kind": {
+      "options": {
+        "ointment": "Ointment",
+        "spray": "Spray",
+        "pill": "Pill",
+        "drops": "Drops",
+        "shampoo": "Shampoo",
+        "injection": "Injection",
+        "other": "Other"
+      }
+    },
+    "dose_status": {
+      "options": {
+        "given": "Given",
+        "skipped": "Skipped"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "meal": {
+        "name": "{meal} meal",
+        "state": {
+          "pending": "Pending",
+          "all": "All",
+          "half": "Half",
+          "little": "Little",
+          "none": "None"
+        }
+      },
+      "weight": {
+        "name": "Weight"
+      },
+      "treatments": {
+        "name": "Treatments"
+      },
+      "next_dose": {
+        "name": "Next dose"
+      },
+      "log": {
+        "name": "Log"
+      },
+      "report": {
+        "name": "Symptoms in 30 days"
+      },
+      "last_symptom": {
+        "name": "Last symptom"
+      }
+    },
+    "binary_sensor": {
+      "late": {
+        "name": "{care} late"
+      }
+    },
+    "switch": {
+      "shedding": {
+        "name": "Shedding season"
+      }
+    },
+    "button": {
+      "care_done": {
+        "name": "{care} done"
+      },
+      "plan_bath": {
+        "name": "Plan the bath"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Care"
+      }
+    }
+  },
+  "services": {
+    "log_care": {
+      "name": "Log care",
+      "description": "Records a care as done.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "care": {
+          "name": "Care",
+          "description": "Key or name of the care."
+        },
+        "at": {
+          "name": "When",
+          "description": "Leave empty for now."
+        },
+        "note": {
+          "name": "Note",
+          "description": "Anything worth remembering."
+        }
+      }
+    },
+    "log_meal": {
+      "name": "Log meal",
+      "description": "How much of a meal was eaten.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "meal": {
+          "name": "Meal",
+          "description": "Empty = by the time of day."
+        },
+        "amount": {
+          "name": "Amount",
+          "description": "How much was eaten."
+        },
+        "grams": {
+          "name": "Grams",
+          "description": "Optional."
+        },
+        "at": {
+          "name": "When",
+          "description": "Leave empty for now."
+        },
+        "note": {
+          "name": "Note",
+          "description": "Anything worth remembering."
+        }
+      }
+    },
+    "log_snack": {
+      "name": "Log snack",
+      "description": "Food outside the usual meals.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "what": {
+          "name": "What",
+          "description": "What was eaten."
+        },
+        "grams": {
+          "name": "Grams",
+          "description": "Optional."
+        },
+        "at": {
+          "name": "When",
+          "description": "Leave empty for now."
+        },
+        "note": {
+          "name": "Note",
+          "description": "Anything worth remembering."
+        }
+      }
+    },
+    "log_symptom": {
+      "name": "Log symptom",
+      "description": "Vomit, soft stool, itching…",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "symptom": {
+          "name": "Symptom",
+          "description": "What happened."
+        },
+        "at": {
+          "name": "When",
+          "description": "Leave empty for now."
+        },
+        "note": {
+          "name": "Note",
+          "description": "Anything worth remembering."
+        }
+      }
+    },
+    "log_weight": {
+      "name": "Log weight",
+      "description": "A weigh-in.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "kg": {
+          "name": "kg",
+          "description": "Weight in kilograms."
+        },
+        "at": {
+          "name": "When",
+          "description": "Leave empty for now."
+        },
+        "note": {
+          "name": "Note",
+          "description": "Anything worth remembering."
+        }
+      }
+    },
+    "log_dose": {
+      "name": "Log dose",
+      "description": "A treatment dose given or skipped.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "treatment": {
+          "name": "Treatment",
+          "description": "Id or name."
+        },
+        "status": {
+          "name": "Status",
+          "description": "Given or skipped."
+        },
+        "time": {
+          "name": "Dose time",
+          "description": "Empty = the closest open dose."
+        }
+      }
+    },
+    "add_treatment": {
+      "name": "Add treatment",
+      "description": "A medicine with times, start and end.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Medicine name."
+        },
+        "kind": {
+          "name": "Kind",
+          "description": "Ointment, spray, pill…"
+        },
+        "dose": {
+          "name": "Dose",
+          "description": "How much each time."
+        },
+        "times": {
+          "name": "Times",
+          "description": "Comma separated, e.g. 07:45, 19:45."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Empty = today."
+        },
+        "end": {
+          "name": "End",
+          "description": "Last day; empty = no end."
+        },
+        "note": {
+          "name": "Note",
+          "description": "Anything worth remembering."
+        }
+      }
+    },
+    "update_treatment": {
+      "name": "Update treatment",
+      "description": "Changes a treatment.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "treatment": {
+          "name": "Treatment",
+          "description": "Id or name."
+        },
+        "name": {
+          "name": "New name",
+          "description": "Empty = unchanged."
+        },
+        "kind": {
+          "name": "Kind",
+          "description": "Empty = unchanged."
+        },
+        "dose": {
+          "name": "Dose",
+          "description": "Empty = unchanged."
+        },
+        "times": {
+          "name": "Times",
+          "description": "Empty = unchanged."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Empty = unchanged."
+        },
+        "end": {
+          "name": "End",
+          "description": "Empty = unchanged."
+        }
+      }
+    },
+    "end_treatment": {
+      "name": "End treatment",
+      "description": "Ends a treatment today.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "treatment": {
+          "name": "Treatment",
+          "description": "Id or name."
+        }
+      }
+    },
+    "set_due": {
+      "name": "Set due date",
+      "description": "Sets when a care is next due.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "care": {
+          "name": "Care",
+          "description": "Key or name."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Next due date."
+        }
+      }
+    },
+    "delete_entry": {
+      "name": "Delete log entry",
+      "description": "Removes a wrong entry from the log.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "entry": {
+          "name": "Id",
+          "description": "Entry id from the log."
+        }
+      }
+    },
+    "export": {
+      "name": "Export log",
+      "description": "Writes the whole log to a CSV file in the media folder.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        }
+      }
+    }
+  }
+}
