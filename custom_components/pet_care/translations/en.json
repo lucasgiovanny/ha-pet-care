@@ -344,7 +344,7 @@
         },
         "treatment": {
           "name": "Treatment",
-          "description": "Id or name."
+          "description": "Id or name; \"all\" = every open dose from 3 h ago to 3 h ahead."
         },
         "status": {
           "name": "Status",

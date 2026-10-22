@@ -192,3 +192,26 @@ async def test_daily_reminder_for_a_due_care(hass: HomeAssistant, pet: MockConfi
     await hass.async_block_till_done()
     care = [r for r in reminders if r.data["kind"] == "care" and r.data["key"] == "flea"]
     assert care and "daqui a 7 dias" in care[0].data["message"]
+
+
+async def test_scripts_can_pass_empty_fields_and_all_doses(
+    hass: HomeAssistant, pet: MockConfigEntry
+) -> None:
+    await hass.services.async_call(
+        DOMAIN,
+        "log_meal",
+        {"amount": "all", "meal": None, "grams": "", "note": None},
+        blocking=True,
+    )
+    now = dt_util.now()
+    at = now.strftime("%H:%M")
+    for name in ("Pomada", "Spray"):
+        await hass.services.async_call(
+            DOMAIN,
+            "add_treatment",
+            {"name": name, "times": at, "end": None, "dose": ""},
+            blocking=True,
+        )
+    await hass.services.async_call(DOMAIN, "log_dose", {"treatment": "all"}, blocking=True)
+    await hass.async_block_till_done()
+    assert {d["status"] for d in pet.runtime_data.doses_today()} == {"given"}

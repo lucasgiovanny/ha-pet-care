@@ -344,7 +344,7 @@
         },
         "treatment": {
           "name": "Tratamento",
-          "description": "Id ou nome."
+          "description": "Id ou nome; \"all\" = todas as doses em aberto de 3 h antes a 3 h depois."
         },
         "status": {
           "name": "Estado",

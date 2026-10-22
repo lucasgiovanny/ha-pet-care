@@ -83,6 +83,7 @@ def _when(value: str) -> datetime:
 
 
 SAVE_DELAY_SECONDS = 2.0
+ALL_TREATMENTS = {"all", "*", "todos", "todas"}
 
 
 class PetTracker:
@@ -477,6 +478,15 @@ class PetTracker:
         at_time: str | None = None,
         context: Context | None = None,
     ) -> None:
+        if str(ref).lower() in ALL_TREATMENTS:
+            # Every dose still open from 3 h ago to 3 h ahead: "I gave the medicines now".
+            now = dt_util.now()
+            for dose in self.doses_today():
+                at = parse_time(dose["time"])
+                moment = now.replace(hour=at.hour, minute=at.minute)
+                if dose["status"] is None and abs((now - moment).total_seconds()) <= 3 * 3600:
+                    await self.async_log_dose(dose["id"], status, dose["time"], context)
+            return
         treatment = self.treatment(ref)
         now = dt_util.now()
         if at_time is None:

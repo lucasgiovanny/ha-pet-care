@@ -37,6 +37,11 @@ NOTE = vol.Optional("note")
 AT = vol.Optional("at")
 
 
+def _opt(validator: Any) -> Any:
+    """Scripts pass empty fields as None or ''; both mean 'not given'."""
+    return vol.Any(None, vol.All(vol.Equal(""), lambda _: None), validator)
+
+
 def _tracker(hass: HomeAssistant, call: ServiceCall) -> PetTracker:
     entries = [
         e for e in hass.config_entries.async_entries(DOMAIN) if e.state is ConfigEntryState.LOADED
@@ -128,7 +133,12 @@ def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_LOG_CARE,
         log_care,
         vol.Schema(
-            {PET: cv.string, vol.Required("care"): cv.string, AT: cv.datetime, NOTE: cv.string}
+            {
+                PET: cv.string,
+                vol.Required("care"): cv.string,
+                AT: _opt(cv.datetime),
+                NOTE: _opt(cv.string),
+            }
         ),
     )
     reg(
@@ -138,11 +148,11 @@ def async_setup_services(hass: HomeAssistant) -> None:
         vol.Schema(
             {
                 PET: cv.string,
-                vol.Optional("meal"): cv.string,
+                vol.Optional("meal"): _opt(cv.string),
                 vol.Required("amount"): vol.In(AMOUNTS),
-                vol.Optional("grams"): vol.Coerce(float),
-                AT: cv.datetime,
-                NOTE: cv.string,
+                vol.Optional("grams"): _opt(vol.Coerce(float)),
+                AT: _opt(cv.datetime),
+                NOTE: _opt(cv.string),
             }
         ),
     )
@@ -154,9 +164,9 @@ def async_setup_services(hass: HomeAssistant) -> None:
             {
                 PET: cv.string,
                 vol.Required("what"): cv.string,
-                vol.Optional("grams"): vol.Coerce(float),
-                AT: cv.datetime,
-                NOTE: cv.string,
+                vol.Optional("grams"): _opt(vol.Coerce(float)),
+                AT: _opt(cv.datetime),
+                NOTE: _opt(cv.string),
             }
         ),
     )
@@ -168,8 +178,8 @@ def async_setup_services(hass: HomeAssistant) -> None:
             {
                 PET: cv.string,
                 vol.Required("symptom"): vol.In(SYMPTOMS),
-                AT: cv.datetime,
-                NOTE: cv.string,
+                AT: _opt(cv.datetime),
+                NOTE: _opt(cv.string),
             }
         ),
     )
@@ -181,8 +191,8 @@ def async_setup_services(hass: HomeAssistant) -> None:
             {
                 PET: cv.string,
                 vol.Required("kg"): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=150)),
-                AT: cv.datetime,
-                NOTE: cv.string,
+                AT: _opt(cv.datetime),
+                NOTE: _opt(cv.string),
             }
         ),
     )
@@ -195,16 +205,16 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 PET: cv.string,
                 vol.Required("treatment"): cv.string,
                 vol.Optional("status", default="given"): vol.In(["given", "skipped"]),
-                vol.Optional("time"): cv.string,
+                vol.Optional("time"): _opt(cv.string),
             }
         ),
     )
     treatment_fields: dict[Any, Any] = {
-        vol.Optional("kind"): vol.In(TREATMENT_KINDS),
-        vol.Optional("dose"): cv.string,
-        vol.Optional("start"): cv.date,
-        vol.Optional("end"): vol.Any(None, cv.date),
-        NOTE: cv.string,
+        vol.Optional("kind"): _opt(vol.In(TREATMENT_KINDS)),
+        vol.Optional("dose"): _opt(cv.string),
+        vol.Optional("start"): _opt(cv.date),
+        vol.Optional("end"): _opt(cv.date),
+        NOTE: _opt(cv.string),
     }
     reg(
         DOMAIN,

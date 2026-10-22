@@ -81,6 +81,7 @@ log_dose:
     config_entry_id: *pet
     treatment:
       required: true
+      example: all
       selector:
         text:
     status:
