@@ -61,14 +61,23 @@ def _times(value: Any) -> list[str]:
     return [str(cv.time(str(item).strip()))[:5] for item in items if str(item).strip()]
 
 
+def _written(tracker: PetTracker, before: set[str]) -> ServiceResponse:
+    return {"ids": [e["id"] for e in tracker.log if e["id"] not in before]}
+
+
 def async_setup_services(hass: HomeAssistant) -> None:
-    async def log_care(call: ServiceCall) -> None:
-        await _tracker(hass, call).async_log_care(
+    async def log_care(call: ServiceCall) -> ServiceResponse:
+        tracker = _tracker(hass, call)
+        before = {e["id"] for e in tracker.log}
+        await tracker.async_log_care(
             call.data["care"], call.data.get("at"), call.data.get("note"), call.context
         )
+        return _written(tracker, before)
 
-    async def log_meal(call: ServiceCall) -> None:
-        await _tracker(hass, call).async_log_meal(
+    async def log_meal(call: ServiceCall) -> ServiceResponse:
+        tracker = _tracker(hass, call)
+        before = {e["id"] for e in tracker.log}
+        await tracker.async_log_meal(
             call.data.get("meal"),
             call.data["amount"],
             call.data.get("grams"),
@@ -76,33 +85,46 @@ def async_setup_services(hass: HomeAssistant) -> None:
             call.data.get("at"),
             call.context,
         )
+        return _written(tracker, before)
 
-    async def log_snack(call: ServiceCall) -> None:
-        await _tracker(hass, call).async_log_snack(
+    async def log_snack(call: ServiceCall) -> ServiceResponse:
+        tracker = _tracker(hass, call)
+        before = {e["id"] for e in tracker.log}
+        await tracker.async_log_snack(
             call.data["what"],
             call.data.get("grams"),
             call.data.get("note"),
             call.data.get("at"),
             call.context,
         )
+        return _written(tracker, before)
 
-    async def log_symptom(call: ServiceCall) -> None:
-        await _tracker(hass, call).async_log_symptom(
+    async def log_symptom(call: ServiceCall) -> ServiceResponse:
+        tracker = _tracker(hass, call)
+        before = {e["id"] for e in tracker.log}
+        await tracker.async_log_symptom(
             call.data["symptom"], call.data.get("note"), call.data.get("at"), call.context
         )
+        return _written(tracker, before)
 
-    async def log_weight(call: ServiceCall) -> None:
-        await _tracker(hass, call).async_log_weight(
+    async def log_weight(call: ServiceCall) -> ServiceResponse:
+        tracker = _tracker(hass, call)
+        before = {e["id"] for e in tracker.log}
+        await tracker.async_log_weight(
             call.data["kg"], call.data.get("note"), call.data.get("at"), call.context
         )
+        return _written(tracker, before)
 
-    async def log_dose(call: ServiceCall) -> None:
-        await _tracker(hass, call).async_log_dose(
+    async def log_dose(call: ServiceCall) -> ServiceResponse:
+        tracker = _tracker(hass, call)
+        before = {e["id"] for e in tracker.log}
+        await tracker.async_log_dose(
             call.data["treatment"],
             call.data.get("status", "given"),
             call.data.get("time"),
             call.context,
         )
+        return _written(tracker, before)
 
     async def add_treatment(call: ServiceCall) -> ServiceResponse:
         data = {**call.data, "times": _times(call.data["times"])}
@@ -140,6 +162,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 NOTE: _opt(cv.string),
             }
         ),
+        supports_response=SupportsResponse.OPTIONAL,
     )
     reg(
         DOMAIN,
@@ -155,6 +178,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 NOTE: _opt(cv.string),
             }
         ),
+        supports_response=SupportsResponse.OPTIONAL,
     )
     reg(
         DOMAIN,
@@ -169,6 +193,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 NOTE: _opt(cv.string),
             }
         ),
+        supports_response=SupportsResponse.OPTIONAL,
     )
     reg(
         DOMAIN,
@@ -182,6 +207,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 NOTE: _opt(cv.string),
             }
         ),
+        supports_response=SupportsResponse.OPTIONAL,
     )
     reg(
         DOMAIN,
@@ -195,6 +221,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 NOTE: _opt(cv.string),
             }
         ),
+        supports_response=SupportsResponse.OPTIONAL,
     )
     reg(
         DOMAIN,
@@ -208,6 +235,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 vol.Optional("time"): _opt(cv.string),
             }
         ),
+        supports_response=SupportsResponse.OPTIONAL,
     )
     treatment_fields: dict[Any, Any] = {
         vol.Optional("kind"): _opt(vol.In(TREATMENT_KINDS)),

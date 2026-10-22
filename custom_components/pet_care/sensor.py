@@ -8,11 +8,12 @@ from typing import Any
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.const import UnitOfMass
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from . import PetCareConfigEntry
-from .const import AMOUNTS, CARE_SUNNY
+from .const import AMOUNTS, CARE_SUNNY, DOMAIN
 from .entity import PetEntity
 from .logic import parse_time
 from .tracker import PetTracker
@@ -206,7 +207,55 @@ class LogSensor(PetEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"recent": self.tracker.recent(), "entries": len(self.tracker.log)}
+        return {
+            "recent": self.tracker.recent(),
+            "entries": len(self.tracker.log),
+            "card": self._card(),
+        }
+
+    def _card(self) -> dict[str, Any]:
+        """What the Pet Care card needs to draw this pet: ids, config and today's doses."""
+        registry = er.async_get(self.hass)
+        entry_id = self.tracker.entry_id
+
+        def find(domain: str, key: str) -> str | None:
+            return registry.async_get_entity_id(domain, DOMAIN, f"{entry_id}_{key}")
+
+        tracker = self.tracker
+        return {
+            "entry_id": entry_id,
+            "pet": tracker.pet,
+            "sex": tracker.options.get("sex", "female"),
+            "meals": [{**m, "entity": find("sensor", f"meal_{m['key']}")} for m in tracker.meals],
+            "care": [
+                {
+                    "key": c["key"],
+                    "name": c["name"],
+                    "kind": c.get("kind"),
+                    "icon": c.get("icon"),
+                    "entity": find("sensor", f"care_{c['key']}"),
+                    "button": find("button", f"done_{c['key']}"),
+                }
+                for c in tracker.care
+            ],
+            "doses": tracker.doses_today(),
+            "treatments": [
+                {k: t.get(k) for k in ("id", "name", "kind", "dose", "times", "start", "end")}
+                for t in tracker.active_treatments()
+            ],
+            "upcoming": [
+                {
+                    "day": i["day"].isoformat(),
+                    "summary": i["summary"].replace(f" · {tracker.pet}", ""),
+                }
+                for i in tracker.calendar_items()[:8]
+            ],
+            "weight": find("sensor", "weight"),
+            "report": find("sensor", "report"),
+            "shedding": find("switch", "shedding"),
+            "plan": find("button", "plan_bath"),
+            "food": tracker.food(),
+        }
 
 
 class ReportSensor(PetEntity, SensorEntity):

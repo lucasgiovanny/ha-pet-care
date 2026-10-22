@@ -461,14 +461,8 @@ class PetTracker:
         self._changed()
 
     def dose_status(self, treatment_id: str, at_time: str, day: date | None = None) -> str | None:
-        day = day or self.care_day()
-        key = f"{treatment_id}@{at_time}"
-        found = [
-            e
-            for e in self.entries("dose", key)
-            if self.care_day(dt_util.as_local(_when(e["at"]))) == day
-        ]
-        return found[-1]["value"] if found else None
+        entry = self.dose_entry(treatment_id, at_time, day)
+        return entry["value"] if entry else None
 
     def dose_times(self, treatment: dict[str, Any], day: date) -> list[str]:
         """A treatment's times on a day, without the ones already past when it was created."""
@@ -485,17 +479,37 @@ class PetTracker:
             >= made - timedelta(minutes=30)
         ]
 
-    def doses_today(self) -> list[dict[str, Any]]:
-        return [
-            {
-                "treatment": t["name"],
-                "id": t["id"],
-                "time": at,
-                "status": self.dose_status(t["id"], at),
-            }
-            for t in self.active_treatments()
-            for at in self.dose_times(t, self.care_day())
+    def dose_entry(
+        self, treatment_id: str, at_time: str, day: date | None = None
+    ) -> dict[str, Any] | None:
+        day = day or self.care_day()
+        key = f"{treatment_id}@{at_time}"
+        found = [
+            e
+            for e in self.entries("dose", key)
+            if self.care_day(dt_util.as_local(_when(e["at"]))) == day
         ]
+        return found[-1] if found else None
+
+    def doses_today(self) -> list[dict[str, Any]]:
+        rows = []
+        for t in self.active_treatments():
+            for at in self.dose_times(t, self.care_day()):
+                entry = self.dose_entry(t["id"], at) or {}
+                rows.append(
+                    {
+                        "treatment": t["name"],
+                        "id": t["id"],
+                        "kind": t.get("kind"),
+                        "dose": t.get("dose"),
+                        "time": at,
+                        "status": entry.get("value"),
+                        "at": entry.get("at"),
+                        "by": entry.get("by"),
+                        "entry": entry.get("id"),
+                    }
+                )
+        return sorted(rows, key=lambda r: (r["time"], r["treatment"]))
 
     async def async_log_dose(
         self,

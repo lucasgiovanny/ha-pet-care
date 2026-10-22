@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.loader import async_get_integration
 
 from .const import DOMAIN
 from .services import async_setup_services
@@ -25,8 +29,25 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 type PetCareConfigEntry = ConfigEntry[PetTracker]
 
 
+CARD_URL = f"/{DOMAIN}/pet-care-card.js"
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_setup_services(hass)
+    # The card ships with the integration: no separate resource to install.
+    version = (await async_get_integration(hass, DOMAIN)).version
+    if "frontend" not in hass.config.components:
+        return True
+    from homeassistant.components.frontend import add_extra_js_url
+
+    await hass.http.async_register_static_paths(
+        [
+            StaticPathConfig(
+                CARD_URL, str(Path(__file__).parent / "frontend" / "pet-care-card.js"), False
+            )
+        ]
+    )
+    add_extra_js_url(hass, f"{CARD_URL}?v={version}")
     return True
 
 
