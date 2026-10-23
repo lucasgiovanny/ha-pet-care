@@ -24,6 +24,7 @@ from .const import (
     SERVICE_LOG_SYMPTOM,
     SERVICE_LOG_WEIGHT,
     SERVICE_SET_DUE,
+    SERVICE_UPDATE_ENTRY,
     SERVICE_UPDATE_TREATMENT,
     SYMPTOMS,
     TREATMENT_KINDS,
@@ -145,6 +146,10 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def delete_entry(call: ServiceCall) -> None:
         await _tracker(hass, call).async_delete(call.data["entry"])
+
+    async def update_entry(call: ServiceCall) -> None:
+        changes = {k: v for k, v in call.data.items() if k not in ("config_entry_id", "entry")}
+        await _tracker(hass, call).async_update(call.data["entry"], changes)
 
     async def export(call: ServiceCall) -> ServiceResponse:
         return await _tracker(hass, call).async_export()
@@ -291,6 +296,26 @@ def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_DELETE_ENTRY,
         delete_entry,
         vol.Schema({PET: cv.string, vol.Required("entry"): cv.string}),
+    )
+    reg(
+        DOMAIN,
+        SERVICE_UPDATE_ENTRY,
+        update_entry,
+        vol.Schema(
+            {
+                PET: cv.string,
+                vol.Required("entry"): cv.string,
+                AT: _opt(cv.datetime),
+                vol.Optional("meal"): cv.string,
+                vol.Optional("amount"): vol.In(AMOUNTS),
+                vol.Optional("what"): cv.string,
+                vol.Optional("symptom"): vol.In(SYMPTOMS),
+                vol.Optional("kg"): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=150)),
+                vol.Optional("status"): vol.In(["given", "skipped"]),
+                vol.Optional("grams"): _opt(vol.Coerce(float)),
+                NOTE: _opt(cv.string),
+            }
+        ),
     )
     reg(
         DOMAIN,

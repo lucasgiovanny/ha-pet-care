@@ -46,6 +46,7 @@ from .const import (
     DEFAULT_REMINDER_TIME,
     DEFAULT_WEIGHT_DAY,
     DOMAIN,
+    EDITABLE,
     EVENT_REMINDER,
     EVENT_RESOLVED,
     EXPORT_DIR,
@@ -220,6 +221,39 @@ class PetTracker:
             raise ServiceValidationError(f"No log entry {entry_id}")
         self._changed()
 
+    async def async_update(self, entry_id: str, changes: dict[str, Any]) -> None:
+        """Correct a record: when it happened and what its type records; None clears grams or note."""
+        entry = next((e for e in self.log if e["id"] == entry_id), None)
+        if entry is None:
+            raise ServiceValidationError(f"No log entry {entry_id}")
+        unknown = set(changes) - EDITABLE.get(entry["type"], set()) - {"at"}
+        if unknown:
+            raise ServiceValidationError(
+                f"A {entry['type']} record has no {', '.join(sorted(unknown))}"
+            )
+        if changes.get("at"):
+            entry["at"] = self._at(changes["at"]).isoformat()
+        if "meal" in changes:
+            key = self._meal_key(changes["meal"])
+            if key is None:
+                raise ServiceValidationError(f"No meal {changes['meal']}")
+            entry["key"] = key
+        if "symptom" in changes:
+            entry["key"] = changes["symptom"]
+            entry["value"] = self.t["symptom"].get(changes["symptom"], changes["symptom"])
+        for field in ("amount", "what", "status"):
+            if field in changes:
+                entry["value"] = changes[field]
+        if "kg" in changes:
+            entry["value"] = round(float(changes["kg"]), 2)
+        for field in ("grams", "note"):
+            if field in changes and changes[field] in (None, ""):
+                entry.pop(field, None)
+            elif field in changes:
+                entry[field] = changes[field]
+        self.log.sort(key=lambda e: e["at"])
+        self._changed()
+
     # ---- care ----------------------------------------------------------
 
     def last_done(self, key: str) -> date | None:
@@ -295,6 +329,12 @@ class PetTracker:
         ]
         return found[-1] if found else None
 
+    def _meal_key(self, slot: str | None) -> str | None:
+        """A meal's key from its key or its name."""
+        if slot in {m["key"] for m in self.meals}:
+            return slot
+        return {m["name"].lower(): m["key"] for m in self.meals}.get(str(slot or "").lower())
+
     async def async_log_meal(
         self,
         slot: str | None,
@@ -305,13 +345,7 @@ class PetTracker:
         context: Context | None = None,
     ) -> None:
         moment = self._at(at)
-        keys = {m["key"]: m for m in self.meals}
-        names = {m["name"].lower(): m["key"] for m in self.meals}
-        slot = (
-            slot
-            if slot in keys
-            else names.get(str(slot or "").lower()) or meal_slot_for(moment, self.meals)
-        )
+        slot = self._meal_key(slot) or meal_slot_for(moment, self.meals)
         self._append(
             {
                 "type": "meal",

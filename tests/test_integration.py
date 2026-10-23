@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import pytest
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -80,6 +81,31 @@ async def test_care_due_and_delete(hass: HomeAssistant, pet: MockConfigEntry) ->
     await hass.services.async_call(DOMAIN, "delete_entry", {"entry": entry_id}, blocking=True)
     await hass.async_block_till_done()
     assert hass.states.get("sensor.alaska_desparasitacao_interna").state == "unknown"
+
+
+async def test_update_entry_corrects_a_record(hass: HomeAssistant, pet: MockConfigEntry) -> None:
+    response = await hass.services.async_call(
+        DOMAIN,
+        "log_meal",
+        {"meal": "morning", "amount": "all", "grams": 300, "note": "ração"},
+        blocking=True,
+        return_response=True,
+    )
+    entry_id = response["ids"][0]
+    await hass.services.async_call(
+        DOMAIN,
+        "update_entry",
+        {"entry": entry_id, "meal": "Noite", "amount": "little", "grams": "", "note": "pouco"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    entry = pet.runtime_data.entries("meal")[-1]
+    assert (entry["key"], entry["value"], entry["note"]) == ("evening", "little", "pouco")
+    assert "grams" not in entry
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN, "update_entry", {"entry": entry_id, "kg": 30}, blocking=True
+        )
 
 
 async def test_treatment_reminder_and_dose(hass: HomeAssistant, pet: MockConfigEntry) -> None:

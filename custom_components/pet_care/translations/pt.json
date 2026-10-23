@@ -487,6 +487,56 @@
           "description": "Só é preciso com mais de um animal."
         }
       }
+    },
+    "update_entry": {
+      "name": "Corrigir registo",
+      "description": "Corrige um registo; só mudam os campos dados.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Animal",
+          "description": "Só é preciso com mais de um animal."
+        },
+        "entry": {
+          "name": "Id",
+          "description": "Id do registo."
+        },
+        "at": {
+          "name": "Quando",
+          "description": "Quando aconteceu."
+        },
+        "meal": {
+          "name": "Refeição",
+          "description": "Só refeições."
+        },
+        "amount": {
+          "name": "Quantidade",
+          "description": "Só refeições."
+        },
+        "what": {
+          "name": "O quê",
+          "description": "Só snacks."
+        },
+        "symptom": {
+          "name": "Sintoma",
+          "description": "Só sintomas."
+        },
+        "kg": {
+          "name": "Peso",
+          "description": "Só pesagens."
+        },
+        "status": {
+          "name": "Estado",
+          "description": "Só doses."
+        },
+        "grams": {
+          "name": "Gramas",
+          "description": "Refeições e snacks; vazio apaga."
+        },
+        "note": {
+          "name": "Nota",
+          "description": "Vazio apaga."
+        }
+      }
     }
   }
 }

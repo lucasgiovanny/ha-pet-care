@@ -487,6 +487,56 @@
           "description": "Only needed with more than one pet."
         }
       }
+    },
+    "update_entry": {
+      "name": "Edit record",
+      "description": "Corrects a record; only the fields given change.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pet",
+          "description": "Only needed with more than one pet."
+        },
+        "entry": {
+          "name": "Id",
+          "description": "Id of the record."
+        },
+        "at": {
+          "name": "When",
+          "description": "When it happened."
+        },
+        "meal": {
+          "name": "Meal",
+          "description": "Meals only."
+        },
+        "amount": {
+          "name": "Amount",
+          "description": "Meals only."
+        },
+        "what": {
+          "name": "What",
+          "description": "Snacks only."
+        },
+        "symptom": {
+          "name": "Symptom",
+          "description": "Symptoms only."
+        },
+        "kg": {
+          "name": "Weight",
+          "description": "Weigh-ins only."
+        },
+        "status": {
+          "name": "Status",
+          "description": "Doses only."
+        },
+        "grams": {
+          "name": "Grams",
+          "description": "Meals and snacks; empty clears."
+        },
+        "note": {
+          "name": "Note",
+          "description": "Empty clears."
+        }
+      }
     }
   }
 }

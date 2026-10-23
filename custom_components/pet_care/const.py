@@ -82,6 +82,7 @@ SERVICE_UPDATE_TREATMENT: Final = "update_treatment"
 SERVICE_END_TREATMENT: Final = "end_treatment"
 SERVICE_SET_DUE: Final = "set_due"
 SERVICE_DELETE_ENTRY: Final = "delete_entry"
+SERVICE_UPDATE_ENTRY: Final = "update_entry"
 SERVICE_EXPORT: Final = "export"
 
 EXPORT_DIR: Final = "pet_care"
@@ -90,3 +91,15 @@ EXPORT_DIR: Final = "pet_care"
 def signal_updated(entry_id: str) -> str:
     """Dispatcher signal for one pet's state changes."""
     return f"{DOMAIN}_updated_{entry_id}"
+
+
+# What a correction may change in each kind of record, besides when it happened.
+EDITABLE: Final = {
+    "meal": {"meal", "amount", "grams", "note"},
+    "snack": {"what", "grams", "note"},
+    "symptom": {"symptom", "note"},
+    "weight": {"kg", "note"},
+    "care": {"note"},
+    "dose": {"status"},
+    "treatment": {"note"},
+}

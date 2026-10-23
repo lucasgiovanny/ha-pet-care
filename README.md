@@ -18,7 +18,7 @@ For each pet, one device with:
 | `sensor.<pet>_weight` | Last weigh-in, with the history as an attribute |
 | `sensor.<pet>_treatments` | Active treatments, with today's doses |
 | `sensor.<pet>_next_dose` | When the next dose is due |
-| `sensor.<pet>_log` | The last 40 log entries (for a table card) |
+| `sensor.<pet>_log` | The last 40 log entries (the card's `show: history` lists and corrects them) |
 | `sensor.<pet>_symptoms_in_30_days` | Symptom count, plus a 30-day report for the vet |
 | `switch.<pet>_shedding_season` | Brushing comes round more often while on |
 | `calendar.<pet>_care` | Upcoming care dates, planned baths and treatment ends |
@@ -32,8 +32,8 @@ For each pet, one device with:
 - **Every N days, more often while shedding** — brushing, with a second interval used while
   the shedding switch is on. In March and September you are asked whether shedding started.
 
-The log is the source of truth: deleting a wrong entry (`pet_care.delete_entry`) fixes the
-dates derived from it.
+The log is the source of truth: correcting (`pet_care.update_entry`) or deleting
+(`pet_care.delete_entry`) a wrong entry fixes the dates derived from it.
 
 ## Reminders
 
@@ -75,8 +75,8 @@ actions:
 ## Services
 
 `log_care`, `log_meal`, `log_snack`, `log_symptom`, `log_weight`, `log_dose`,
-`add_treatment`, `update_treatment`, `end_treatment`, `set_due`, `delete_entry` and
-`export` (writes the whole log as CSV to the media folder). With a single pet the
+`add_treatment`, `update_treatment`, `end_treatment`, `set_due`, `update_entry`,
+`delete_entry` and `export` (writes the whole log as CSV to the media folder). With a single pet the
 `config_entry_id` field can be left out.
 
 ## Installation

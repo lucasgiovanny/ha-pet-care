@@ -1,7 +1,7 @@
 // Pet Care card: tiles that look like Home Assistant's own, and dialogs made for each kind of record.
 // Every card points at the pet's log sensor, whose `card` attribute says where everything else is.
 
-const VERSION = "0.2.3";
+const VERSION = "0.3.0";
 
 const TEXT = {
   pt: {
@@ -31,6 +31,8 @@ const TEXT = {
     mealPending: (name, time) => `${name} por dar · ${time}`,
     ateMeals: (n, total) => (n === total ? (total === 1 ? "Já comeu" : `Comeu as ${total} refeições`) : `Comeu ${n} de ${total} refeições`),
     mealLate: (name) => `${name} por dar`, medicinesDone: "remédios dados", careLate: (name) => `${name} atrasado`,
+    history: "Histórico", noHistory: "Sem registos", more: "Mostrar mais", care: "Cuidado", yesterday: "Ontem",
+    remove: "Apagar", confirmRemove: "Apagar mesmo?", removed: "Apagado", corrected: "Corrigido", failed: "Não deu",
   },
   en: {
     today: "Today", pending: "Pending", given: "Given", skipped: "Skipped", missed: "Missed",
@@ -59,6 +61,8 @@ const TEXT = {
     mealPending: (name, time) => `${name} pending · ${time}`,
     ateMeals: (n, total) => (n === total ? (total === 1 ? "Has eaten" : `Ate all ${total} meals`) : `Ate ${n} of ${total} meals`),
     mealLate: (name) => `${name} pending`, medicinesDone: "medicines given", careLate: (name) => `${name} late`,
+    history: "History", noHistory: "No records", more: "Show more", care: "Care", yesterday: "Yesterday",
+    remove: "Delete", confirmRemove: "Really delete?", removed: "Deleted", corrected: "Corrected", failed: "Failed",
   },
 };
 
@@ -115,6 +119,14 @@ const TILE_CSS = `
   .row:last-child { border-bottom: none; }
   .row .day { color: var(--secondary-text-color); white-space: nowrap; }
   .empty { padding: 16px; color: var(--secondary-text-color); font-size: 14px; }
+  .dayhead { font-size: 12px; font-weight: 500; color: var(--secondary-text-color); padding: 12px 0 4px; text-transform: capitalize; }
+  .dayhead:first-child { padding-top: 4px; }
+  .entry { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; border-bottom: 1px solid var(--divider-color); color: var(--c); -webkit-tap-highlight-color: transparent; }
+  .entry .icon { width: 32px; height: 32px; }
+  .entry ha-icon { --mdc-icon-size: 20px; }
+  .entry .text { flex: 1; }
+  .entry .day { font-size: 12px; color: var(--secondary-text-color); white-space: nowrap; }
+  .more { width: 100%; background: none; border: none; color: var(--primary-color); font: inherit; font-size: 14px; padding: 10px 0 4px; cursor: pointer; }
 `;
 
 function lang(hass) {
@@ -125,9 +137,13 @@ function t(hass) {
   return (hass?.locale?.language || hass?.language || "en").startsWith("pt") ? TEXT.pt : TEXT.en;
 }
 
+// Only these services answer; asking the others for a response makes Home Assistant refuse the call.
+const ANSWERS = new Set(["log_care", "log_meal", "log_snack", "log_symptom", "log_weight", "log_dose", "add_treatment", "export"]);
+
 async function callService(hass, service, data) {
-  const result = await hass.callWS({ type: "call_service", domain: "pet_care", service, service_data: data, return_response: true });
-  return result?.response || {};
+  const answers = ANSWERS.has(service);
+  const result = await hass.callWS({ type: "call_service", domain: "pet_care", service, service_data: data, ...(answers ? { return_response: true } : {}) });
+  return (answers && result?.response) || {};
 }
 
 // ---------- toast -------------------------------------------------------------------------
@@ -147,8 +163,12 @@ function toast(hass, message, undoIds) {
   el.shadowRoot.querySelector("button")?.addEventListener("click", async () => {
     el.remove();
     const entryId = el.dataset.entry;
-    for (const id of undoIds) await callService(hass, "delete_entry", { entry: id, config_entry_id: entryId });
-    toast(hass, T.undone);
+    try {
+      for (const id of undoIds) await callService(hass, "delete_entry", { entry: id, config_entry_id: entryId });
+      toast(hass, T.undone);
+    } catch (err) {
+      toast(hass, `${T.failed}: ${err?.message || err}`);
+    }
   });
   setTimeout(() => el.remove(), 6000);
   return el;
@@ -433,6 +453,77 @@ function doseDialog(hass, card, dose) {
   });
 }
 
+const TYPE_TITLES = { meal: "meal", snack: "snack", symptom: "symptom", weight: "weight", dose: "dose", treatment: "treatment", care: "care" };
+
+function entryLook(card, e) {
+  if (e.type === "meal") return { icon: AMOUNT_ICONS[e.value] || "mdi:bowl-mix", color: AMOUNT_COLORS[e.value] || "green" };
+  if (e.type === "symptom") return { icon: SYMPTOM_ICONS[e.key] || ACTIONS.symptom.icon, color: "red" };
+  if (e.type === "dose") return { icon: e.value === "given" ? "mdi:check-circle" : "mdi:debug-step-over", color: e.value === "given" ? "purple" : "grey" };
+  if (e.type === "care") return { icon: card.care.find((c) => c.key === e.key)?.icon || "mdi:paw", color: "teal" };
+  return ACTIONS[e.type] || { icon: "mdi:note-outline", color: "grey" };
+}
+
+function entryDialog(hass, card, e) {
+  const T = t(hass);
+  const original = localInput(new Date(e.at));
+  let meal = e.key, amount = e.value, symptom = e.key, status = e.value;
+  const chips = (name, options, current) => `<div class="chips row4">${options.map(([k, label, icon, c]) => `<button data-${name}="${esc(k)}" class="${k === current ? "on" : ""}"${c ? ` style="--c:${color(c)}"` : ""}>${icon ? `<ha-icon icon="${icon}"></ha-icon>` : ""}${esc(label)}</button>`).join("")}</div>`;
+  const note = `<label>${esc(T.note)}</label><textarea name="note">${esc(e.note || "")}</textarea>`;
+  const grams = `<label>${esc(T.grams)}</label><input name="grams" type="number" inputmode="decimal" min="0" value="${esc(e.grams ?? "")}">`;
+  const fields = {
+    meal: () => `${card.meals.length > 1 ? chips("meal", card.meals.map((m) => [m.key, m.name]), meal) : ""}
+      ${chips("amount", Object.entries(T.amounts).map(([k, label]) => [k, label, AMOUNT_ICONS[k], AMOUNT_COLORS[k]]), amount)}${grams}${note}`,
+    snack: () => `<label>${esc(T.what)}</label><input name="what" type="text" value="${esc(e.value)}">${grams}${note}`,
+    symptom: () => `<div class="chips">${Object.entries(T.symptoms).map(([k, label]) => `<button data-symptom="${k}" class="${k === symptom ? "on" : ""}" style="--c:${color("red")}"><ha-icon icon="${SYMPTOM_ICONS[k]}"></ha-icon>${esc(label)}</button>`).join("")}</div>${note}`,
+    weight: () => `<div class="stepper"><button data-step="-0.1">−</button><input name="kg" type="number" inputmode="decimal" step="0.1" value="${esc(Number(e.value).toFixed(1))}"><button data-step="0.1">+</button></div>${note}`,
+    dose: () => chips("status", [["given", T.given, "mdi:check-circle", "purple"], ["skipped", T.skipped, "mdi:debug-step-over", "grey"]], status),
+  };
+  const body = `<div class="sub">${esc(e.label)}${e.by ? ` · ${esc(e.by)}` : ""}</div>
+    ${(fields[e.type] || (() => note))()}
+    <label>${esc(T.when)}</label><input type="datetime-local" name="at" value="${original}">
+    <div class="actions"><button class="danger-btn" data-remove>${esc(T.remove)}</button><button class="text-btn" data-close>${esc(T.cancel)}</button><button class="primary-btn" data-save>${esc(T.save)}</button></div>`;
+  const look = entryLook(card, e);
+  openDialog(hass, `${T[TYPE_TITLES[e.type]] || e.type} · ${new Date(e.at).toLocaleDateString(lang(hass), { weekday: "short", day: "2-digit", month: "2-digit" })}`, look.icon, look.color, body, (root, close) => {
+    const pick = (name, set) => root.querySelectorAll(`[data-${name}]`).forEach((b) => b.addEventListener("click", () => {
+      set(b.dataset[name]);
+      root.querySelectorAll(`[data-${name}]`).forEach((x) => x.classList.toggle("on", x === b));
+    }));
+    pick("meal", (v) => { meal = v; });
+    pick("amount", (v) => { amount = v; });
+    pick("symptom", (v) => { symptom = v; });
+    pick("status", (v) => { status = v; });
+    const kg = root.querySelector("[name=kg]");
+    root.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => { kg.value = (Number(kg.value || 0) + Number(b.dataset.step)).toFixed(1); }));
+    const run = async (service, data, done) => {
+      try {
+        await callService(hass, service, { config_entry_id: card.entry_id, entry: e.id, ...data });
+        close();
+        toast(hass, done);
+      } catch (err) {
+        toast(hass, `${T.failed}: ${err?.message || err}`);
+      }
+    };
+    const remove = root.querySelector("[data-remove]");
+    remove.addEventListener("click", () => {
+      if (remove.dataset.armed) return run("delete_entry", {}, T.removed);
+      remove.dataset.armed = "1";
+      remove.textContent = T.confirmRemove;
+    });
+    root.querySelector("[data-save]").addEventListener("click", () => {
+      const at = root.querySelector("[name=at]").value;
+      const data = at && at !== original ? { at: new Date(at).toISOString() } : {};
+      const text = (name) => root.querySelector(`[name=${name}]`)?.value.trim() ?? "";
+      if (e.type !== "dose") data.note = text("note");
+      if (e.type === "meal") Object.assign(data, { meal, amount, grams: text("grams") });
+      if (e.type === "snack") Object.assign(data, { what: text("what") || e.value, grams: text("grams") });
+      if (e.type === "symptom") data.symptom = symptom;
+      if (e.type === "weight") data.kg = Number(kg.value);
+      if (e.type === "dose") data.status = status;
+      run("update_entry", data, T.corrected);
+    });
+  });
+}
+
 // ---------- the card -------------------------------------------------------------------------
 
 class PetCareCard extends HTMLElement {
@@ -466,7 +557,7 @@ class PetCareCard extends HTMLElement {
     if (s === "action") return { columns: 6, rows: 2, min_columns: 3, min_rows: 2 };
     if (s === "weight") return (this._hass?.states[this._card?.weight]?.attributes?.history || []).length ? { columns: 12, rows: 3, min_rows: 2 } : { columns: 12, rows: 1, min_rows: 1 };
     if (s === "doses") { const n = Math.max(1, Math.ceil((this._card?.doses?.length || 1) / 2)); return { columns: 12, rows: n, min_rows: n }; }
-    if (s === "upcoming") return { columns: 12, rows: "auto" };
+    if (s === "upcoming" || s === "history") return { columns: 12, rows: "auto" };
     return { columns: 6, rows: 1, min_rows: 1 };
   }
 
@@ -562,6 +653,26 @@ class PetCareCard extends HTMLElement {
         <div class="text"><span class="primary">${esc(T.weight)}</span><span class="secondary">${esc(secondary)}</span></div></div>${chart}</ha-card>`;
     } else if (cfg.show === "upcoming") {
       html = `<ha-card><div class="list">${card.upcoming.length ? card.upcoming.map((u) => `<div class="row"><span>${esc(u.summary)}</span><span class="day">${esc(parseDay(u.day).toLocaleDateString(lang(hass), { weekday: "short", day: "2-digit", month: "2-digit" }))}</span></div>`).join("") : `<div class="empty">${esc(T.nothing)}</div>`}</div></ha-card>`;
+    } else if (cfg.show === "history") {
+      const all = this._recent || [];
+      const rows = all.slice(0, this._more ? all.length : cfg.count || 12);
+      const today = now.toDateString();
+      const yesterday = new Date(now.getTime() - 86400000).toDateString();
+      let lastDay = "";
+      const items = rows.map((e) => {
+        const d = new Date(e.at);
+        const day = d.toDateString();
+        const head = day === lastDay ? "" : `<div class="dayhead">${esc(day === today ? T.today : day === yesterday ? T.yesterday : d.toLocaleDateString(lang(hass), { weekday: "long", day: "2-digit", month: "2-digit" }))}</div>`;
+        lastDay = day;
+        const look = entryLook(card, e);
+        const note = e.type !== "dose" && e.note ? `<span class="secondary">${esc(e.note)}</span>` : "";
+        return `${head}<div class="entry" data-act="entry" data-id="${esc(e.id)}" style="--c:${color(look.color)}">
+          <div class="icon"><ha-icon icon="${esc(look.icon)}"></ha-icon></div>
+          <div class="text"><span class="primary">${esc(e.label)}</span>${note}</div>
+          <span class="day">${esc(hhmm(e.at))}${e.by ? ` · ${esc(e.by.split(" ")[0])}` : ""}</span></div>`;
+      });
+      const more = !this._more && all.length > rows.length ? `<button class="more" data-act="more">${esc(T.more)}</button>` : "";
+      html = `<ha-card><div class="list">${items.length ? items.join("") + more : `<div class="empty">${esc(T.noHistory)}</div>`}</div></ha-card>`;
     } else {
       const a = ACTIONS[cfg.action] || ACTIONS.symptom;
       html = this._tile({ icon: cfg.icon || a.icon, colorName: cfg.color || a.color, primary: cfg.name || T[cfg.action] || cfg.action, vertical: true, data: `data-act="${esc(cfg.action)}"` });
@@ -579,6 +690,8 @@ class PetCareCard extends HTMLElement {
     if (act === "weight") return weightDialog(hass, card);
     if (act === "snack") return snackDialog(hass, card, this._recent);
     if (act === "treatment") return treatmentDialog(hass, card);
+    if (act === "entry") return entryDialog(hass, card, this._recent.find((e) => e.id === el.dataset.id));
+    if (act === "more") { this._more = true; return this._render(); }
     if (act === "care") return careDialog(hass, card, card.care.find((c) => c.key === el.dataset.care));
     if (act === "dose") {
       const dose = card.doses[Number(el.dataset.i)];
