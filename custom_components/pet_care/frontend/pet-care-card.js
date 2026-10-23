@@ -1,7 +1,7 @@
 // Pet Care card: tiles that look like Home Assistant's own, and dialogs made for each kind of record.
 // Every card points at the pet's log sensor, whose `card` attribute says where everything else is.
 
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 
 const TEXT = {
   pt: {
@@ -31,7 +31,7 @@ const TEXT = {
     mealPending: (name, time) => `${name} por dar · ${time}`,
     ateMeals: (n, total) => (n === total ? (total === 1 ? "Já comeu" : `Comeu as ${total} refeições`) : `Comeu ${n} de ${total} refeições`),
     mealLate: (name) => `${name} por dar`, medicinesDone: "remédios dados", careLate: (name) => `${name} atrasado`,
-    history: "Histórico", noHistory: "Sem registos", more: "Mostrar mais", care: "Cuidado", yesterday: "Ontem",
+    treatments: "Tratamentos", until: (d) => `até ${d}`, from: (d) => `começa ${d}`, history: "Histórico", noHistory: "Sem registos", more: "Mostrar mais", care: "Cuidado", yesterday: "Ontem",
     remove: "Apagar", confirmRemove: "Apagar mesmo?", removed: "Apagado", corrected: "Corrigido", failed: "Não deu",
   },
   en: {
@@ -61,7 +61,7 @@ const TEXT = {
     mealPending: (name, time) => `${name} pending · ${time}`,
     ateMeals: (n, total) => (n === total ? (total === 1 ? "Has eaten" : `Ate all ${total} meals`) : `Ate ${n} of ${total} meals`),
     mealLate: (name) => `${name} pending`, medicinesDone: "medicines given", careLate: (name) => `${name} late`,
-    history: "History", noHistory: "No records", more: "Show more", care: "Care", yesterday: "Yesterday",
+    treatments: "Treatments", until: (d) => `until ${d}`, from: (d) => `starts ${d}`, history: "History", noHistory: "No records", more: "Show more", care: "Care", yesterday: "Yesterday",
     remove: "Delete", confirmRemove: "Really delete?", removed: "Deleted", corrected: "Corrected", failed: "Failed",
   },
 };
@@ -211,6 +211,15 @@ const DIALOG_CSS = `
   .danger-btn { background: none; color: var(--error-color, #db4437); margin-right: auto; }
   details summary { cursor: pointer; color: var(--primary-color); font-size: 14px; margin-top: 8px; }
   .wide { width: 100%; justify-content: center; display: flex; }
+  .items { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--divider-color); border-radius: 12px; background: none;
+    color: var(--primary-text-color); font-family: inherit; text-align: left; cursor: pointer; }
+  .item:hover { background: rgba(127,127,127,.08); }
+  .item > ha-icon:first-child { color: var(--c); }
+  .item > ha-icon:last-child { color: var(--secondary-text-color); margin-left: auto; }
+  .item span { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 15px; }
+  .item b { font-weight: 500; }
+  .item small { color: var(--secondary-text-color); font-size: 12px; }
 `;
 
 function openDialog(hass, title, icon, iconColor, body, onReady) {
@@ -424,6 +433,24 @@ function treatmentDialog(hass, card, treatment) {
       close();
       toast(hass, `${T.saved}: ${name}`);
     });
+  });
+}
+
+function treatmentsDialog(hass, card) {
+  const T = t(hass);
+  if (!card.treatments.length) return treatmentDialog(hass, card);
+  const day = (d) => parseDay(d).toLocaleDateString(lang(hass), { day: "2-digit", month: "2-digit" });
+  const today = dateInput(new Date());
+  const rows = card.treatments.map((tr, i) => {
+    const when = tr.start && tr.start > today ? T.from(day(tr.start)) : tr.end ? T.until(day(tr.end)) : T.noEnd;
+    return `<button class="item" data-i="${i}" style="--c:${color("purple")}"><ha-icon icon="${KIND_ICONS[tr.kind] || KIND_ICONS.other}"></ha-icon>
+      <span><b>${esc(tr.name)}</b><small>${esc([tr.times.join(" · "), when, tr.dose].filter(Boolean).join(" · "))}</small></span><ha-icon icon="mdi:chevron-right"></ha-icon></button>`;
+  }).join("");
+  const body = `<div class="items">${rows}</div>
+    <div class="actions"><button class="text-btn" data-close>${esc(T.cancel)}</button><button class="primary-btn" data-new>+ ${esc(T.newTreatment)}</button></div>`;
+  openDialog(hass, `${T.treatments} · ${card.pet}`, ACTIONS.treatment.icon, "purple", body, (root, close) => {
+    root.querySelectorAll("[data-i]").forEach((b) => b.addEventListener("click", () => { close(); treatmentDialog(hass, card, card.treatments[Number(b.dataset.i)]); }));
+    root.querySelector("[data-new]").addEventListener("click", () => { close(); treatmentDialog(hass, card); });
   });
 }
 
@@ -689,7 +716,7 @@ class PetCareCard extends HTMLElement {
     if (act === "symptom") return symptomDialog(hass, card);
     if (act === "weight") return weightDialog(hass, card);
     if (act === "snack") return snackDialog(hass, card, this._recent);
-    if (act === "treatment") return treatmentDialog(hass, card);
+    if (act === "treatment") return treatmentsDialog(hass, card);
     if (act === "entry") return entryDialog(hass, card, this._recent.find((e) => e.id === el.dataset.id));
     if (act === "more") { this._more = true; return this._render(); }
     if (act === "care") return careDialog(hass, card, card.care.find((c) => c.key === el.dataset.care));

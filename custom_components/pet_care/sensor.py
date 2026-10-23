@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 from . import PetCareConfigEntry
 from .const import AMOUNTS, CARE_SUNNY, DOMAIN
 from .entity import PetEntity
-from .logic import parse_time
+from .logic import parse_date, parse_time
 from .tracker import PetTracker
 
 
@@ -222,6 +222,7 @@ class LogSensor(PetEntity, SensorEntity):
             return registry.async_get_entity_id(domain, DOMAIN, f"{entry_id}_{key}")
 
         tracker = self.tracker
+        today = tracker.care_day()
         return {
             "entry_id": entry_id,
             "pet": tracker.pet,
@@ -241,7 +242,8 @@ class LogSensor(PetEntity, SensorEntity):
             "doses": tracker.doses_today(),
             "treatments": [
                 {k: t.get(k) for k in ("id", "name", "kind", "dose", "times", "start", "end")}
-                for t in tracker.active_treatments()
+                for t in tracker.treatments
+                if not t.get("ended") and (parse_date(t.get("end")) or today) >= today
             ],
             "upcoming": [
                 {
