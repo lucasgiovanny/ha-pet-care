@@ -1,7 +1,7 @@
 // Pet Care card: tiles that look like Home Assistant's own, and dialogs made for each kind of record.
 // Every card points at the pet's log sensor, whose `card` attribute says where everything else is.
 
-const VERSION = "0.3.1";
+const VERSION = "0.3.2";
 
 const TEXT = {
   pt: {
@@ -118,6 +118,8 @@ const TILE_CSS = `
   .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--divider-color); }
   .row:last-child { border-bottom: none; }
   .row .day { color: var(--secondary-text-color); white-space: nowrap; }
+  .row.late, .row.late .day { color: var(--error-color, #db4437); }
+  .row.late ha-icon { --mdc-icon-size: 18px; margin-right: 6px; vertical-align: -3px; }
   .empty { padding: 16px; color: var(--secondary-text-color); font-size: 14px; }
   .dayhead { font-size: 12px; font-weight: 500; color: var(--secondary-text-color); padding: 12px 0 4px; text-transform: capitalize; }
   .dayhead:first-child { padding-top: 4px; }
@@ -679,7 +681,7 @@ class PetCareCard extends HTMLElement {
         <div class="icon"><ha-icon icon="mdi:scale-bathroom"></ha-icon></div>
         <div class="text"><span class="primary">${esc(T.weight)}</span><span class="secondary">${esc(secondary)}</span></div></div>${chart}</ha-card>`;
     } else if (cfg.show === "upcoming") {
-      html = `<ha-card><div class="list">${card.upcoming.length ? card.upcoming.map((u) => `<div class="row"><span>${esc(u.summary)}</span><span class="day">${esc(parseDay(u.day).toLocaleDateString(lang(hass), { weekday: "short", day: "2-digit", month: "2-digit" }))}</span></div>`).join("") : `<div class="empty">${esc(T.nothing)}</div>`}</div></ha-card>`;
+      html = `<ha-card><div class="list">${card.upcoming.length ? card.upcoming.map((u) => { const late = daysBetween(now, parseDay(u.day)) < 0; return `<div class="row${late ? " late" : ""}"><span>${late ? `<ha-icon icon="mdi:alert-circle"></ha-icon>` : ""}${esc(u.summary)}</span><span class="day">${esc(parseDay(u.day).toLocaleDateString(lang(hass), { weekday: "short", day: "2-digit", month: "2-digit" }))}${late ? ` · ${esc(T.inDays(daysBetween(now, parseDay(u.day))))}` : ""}</span></div>`; }).join("") : `<div class="empty">${esc(T.nothing)}</div>`}</div></ha-card>`;
     } else if (cfg.show === "history") {
       const all = this._recent || [];
       const rows = all.slice(0, this._more ? all.length : cfg.count || 12);
